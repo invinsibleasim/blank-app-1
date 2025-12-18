@@ -402,10 +402,15 @@ with pd.ExcelWriter("pv_iv_uncertainty_report.xlsx", engine="openpyxl") as write
 with open("pv_iv_uncertainty_report.xlsx", "rb") as f:
     st.download_button(label="Download full report (Excel)", data=f, file_name="pv_iv_uncertainty_report.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-st.info("Notes: 
-- Rectangular inputs -> a/sqrt(3); Normal inputs are sigma. 
-- Temperature effects use u(y)^2 = (DeltaT)^2*u(TC)^2 + (TC)^2*u(DeltaT)^2. 
-- Temperature deviations converted to relative % via (dev/25)*100. 
-- Pmpp uncertainty assumes independence between Impp and Vmpp: sqrt(u_rel(I)^2 + u_rel(V)^2). 
-- Geometry/orientation items are modeled as % contributors; detailed optical model can refine them. 
-- Lead resistance not auto-converted to % in this version.")
+
+st.info(
+    """
+    **Notes:**
+    * Rectangular inputs -> $a/\\sqrt{3}$; Normal inputs are $\\sigma$.
+    * Temperature effects use $u(y)^2 = (\\DeltaT)^2*u(TC)^2 + (TC)^2*u(\\DeltaT)^2$.
+    * Temperature deviations converted to relative % via $(\\text{dev}/25)*100$.
+    * Pmpp uncertainty assumes independence between Impp and Vmpp: $\\sqrt{u_{\\text{rel}}(I)^2 + u_{\\text{rel}}(V)^2}$.
+    * Geometry/orientation items are modeled as % contributors; detailed optical model can refine them.
+    * Lead resistance not auto-converted to % in this version.
+    """
+)
