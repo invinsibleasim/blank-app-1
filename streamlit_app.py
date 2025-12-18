@@ -198,7 +198,7 @@ u_temp_P_ref = u_temp_effect(tc_pmax_ref, u_tc_pmax_ref, dT, u_dT) if (tc_pmax_r
 u_temp_unit_ref_percent = standard_uncertainty(percent_from_temp_dev_c(u_temp_unit_ref), DIST_RECTANGULAR)
 
 u_avg_irr_area_std = standard_uncertainty(u_avg_irr_area, dist_default)
-nu_spectral_mismatch_extra = standard_uncertainty(spectral_mismatch_extra, dist_default)
+u_spectral_mismatch_extra = standard_uncertainty(spectral_mismatch_extra, dist_default)
 nu_nonuniform_module = standard_uncertainty(non_uniformity_module, DIST_RECTANGULAR)
 
 u_temp_unit_pv_percent = standard_uncertainty(percent_from_temp_dev_c(u_temp_unit_pv), DIST_RECTANGULAR)
