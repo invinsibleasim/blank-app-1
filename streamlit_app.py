@@ -14,47 +14,61 @@ DIST_RECTANGULAR = "Rectangular"
 DIST_NORMAL = "Normal"
 
 def standard_uncertainty(value: float, distribution: str) -> float:
-    # Rectangular: standard uncertainty is a/sqrt(3); Normal: value is already sigma
+    """Return standard uncertainty (1-sigma) given half-width for rectangular or sigma for normal."""
     if distribution == DIST_RECTANGULAR:
         return float(value) / math.sqrt(3)
     return float(value)
 
 def combine_rss(values: List[float]) -> float:
+    """Root-sum-of-squares."""
     arr = np.array(values, dtype=float)
     return float(np.sqrt(np.sum(arr ** 2)))
 
 def u_temp_effect(tc_percent_per_k: float, u_tc_percent_per_k: float, dT_k: float, u_dT_k: float) -> float:
-    # u(y)^2 = (dT)^2 * u(TC)^2 + (TC)^2 * u(dT)^2
+    """Uncertainty of relative temperature effect y = TC[%/K] * dT[K].
+    u(y)^2 = (dT)^2 * u(TC)^2 + (TC)^2 * u(dT)^2
+    Returns u(y) in percent."""
     return float(np.sqrt((dT_k ** 2) * (u_tc_percent_per_k ** 2) + (tc_percent_per_k ** 2) * (u_dT_k ** 2)))
 
 def percent_from_temp_dev_c(dev_c: float) -> float:
-    # (dev / 25 degC) * 100 converts to relative percent
+    """Convert an absolute temperature deviation (°C) to relative percent via (dev/25)*100."""
     return float(dev_c) / 25.0 * 100.0
 
 st.set_page_config(page_title="PV IV Measurement Uncertainty", layout="wide")
+
 st.title("PV Module IV Measurement Uncertainty Calculator")
-st.caption("Compute combined standard uncertainty and expanded uncertainty for IV parameters (Isc, Impp, Voc, Vmpp, Pmpp) using a configurable GUM-based budget.")
+st.caption("Calculate combined and expanded uncertainties for IV parameters (Isc, Impp, Voc, Vmpp, Pmpp) using a GUM-based budget.")
 
 with st.sidebar:
     st.header("Global settings")
     k = st.number_input("Coverage factor k (approx 2 for ~95%)", min_value=1.0, max_value=3.0, value=2.0, step=0.1)
     st.divider()
 
-    st.subheader("Environmental conditions")
-    t_module = st.number_input("Measured module temperature [degC]", value=25.0, step=0.1)
-    t_ref = st.number_input("Reference temperature [degC] (STC=25)", value=25.0, step=0.1)
+    st.subheader("Environmental & test configuration")
+    t_module = st.number_input("Measured module temperature [°C]", value=25.0, step=0.1)
+    t_ref = st.number_input("Reference temperature [°C] (STC=25)", value=25.0, step=0.1)
     dT = t_module - t_ref
-    st.write(f"Delta T = {dT:.2f} degC")
+    st.write(f"ΔT = {dT:.2f} °C")
 
-    max_temp_dev = st.number_input("Max temperature deviation [degC] (half-width a)", value=1.0, step=0.1)
+    mode = st.selectbox("Measurement mode", ["Default", "Long storage (low handling)", "Fast/normal"], index=0)
+    suggested_dev = 1.0 if mode in ("Default", "Fast/normal") else 0.2
+    max_temp_dev = st.number_input("Max temperature deviation [°C] (half-width a)", value=float(suggested_dev), step=0.1, help="Rectangular half-width")
     u_dT = standard_uncertainty(max_temp_dev, DIST_RECTANGULAR)
-    st.write(f"Standard uncertainty u(Delta T) = {u_dT:.3f} degC")
+    st.write(f"Standard uncertainty u(ΔT) = {u_dT:.3f} °C")
 
+    st.markdown("**Geometry / test area (for non-uniformity context)**")
+    min_len_mm = st.number_input("Min. module length [mm]", value=1000, step=10)
+    min_w_mm = st.number_input("Min. module width [mm]", value=600, step=10)
+    test_len_m = st.number_input("Test area length [m]", value=2.6, step=0.1)
+    test_w_m = st.number_input("Test area width [m]", value=1.3, step=0.1)
+    module_area_m2 = (min_len_mm/1000.0) * (min_w_mm/1000.0)
+    test_area_m2 = test_len_m * test_w_m
+    st.write(f"Module area (min) ≈ {module_area_m2:.3f} m²; Test area ≈ {test_area_m2:.3f} m²")
+
+    st.subheader("Irradiance & spectral")
     irr_nonuni = st.number_input("Max irradiance non-uniformity [%] (half-width a)", value=1.6, step=0.1)
-    irr_dev_ref = st.number_input("Irradiance deviation module->reference cell [%] (half-width a)", value=0.50, step=0.01)
-
-    st.subheader("Spectral mismatch")
-    mm_sigma = st.number_input("Spectral MM uncertainty [%] (sigma)", value=1.00, step=0.01)
+    irr_dev_ref = st.number_input("Irradiance deviation module→reference cell [%] (half-width a)", value=0.50, step=0.01)
+    mm_sigma = st.number_input("Spectral mismatch (MM) uncertainty [%] (σ)", value=1.00, step=0.01)
 
     st.subheader("Temperature coefficients")
     tc_i = st.number_input("TC_I [%/K]", value=0.04, step=0.01)
@@ -66,11 +80,11 @@ with st.sidebar:
     u_tc_u = standard_uncertainty(tc_u_dev_max, DIST_RECTANGULAR)
 
     st.subheader("Temperature measurement chain")
-    temp_dev_backsheet = st.number_input("Temp deviation backsheet<->pn-junction [degC] (half-width a)", value=0.40, step=0.05)
-    temp_sensors_mean_dev = st.number_input("Mean of sensors <-> true mean [degC] (half-width a)", value=0.40, step=0.05)
-    include_temp_chain = st.checkbox("Include temp measurement-chain contributions in current-related parameters", value=True)
+    temp_dev_backsheet = st.number_input("Backsheet ↔ pn-junction deviation [°C] (half-width a)", value=0.40, step=0.05)
+    temp_sensors_mean_dev = st.number_input("Sensors mean ↔ true mean [°C] (half-width a)", value=0.40, step=0.05)
+    include_temp_chain = st.checkbox("Include temperature measurement-chain in current-related parameters", value=True)
 
-    st.subheader("Include irradiance effects in voltage parameters?")
+    st.subheader("Irradiance effects in voltage?")
     include_irr_in_voltage = st.checkbox("Include irradiance-related uncertainties in Voc/Vmpp", value=False)
 
     st.subheader("Hysteresis (%), Rectangular")
@@ -80,53 +94,49 @@ with st.sidebar:
     hyst_vmpp = st.number_input("Hysteresis Vmpp [%] (half-width a)", value=0.15, step=0.01)
     hyst_pmpp = st.number_input("Hysteresis Pmpp [%] (half-width a)", value=0.50, step=0.01)
 
-    st.subheader("Reproducibility (%), Normal (sigma)")
-    repro_isc = st.number_input("Reproducibility Isc [%] (sigma)", value=0.65, step=0.01)
-    repro_impp = st.number_input("Reproducibility Impp [%] (sigma)", value=0.66, step=0.01)
-    repro_voc = st.number_input("Reproducibility Voc [%] (sigma)", value=0.19, step=0.01)
-    repro_vmpp = st.number_input("Reproducibility Vmpp [%] (sigma)", value=0.25, step=0.01)
-    repro_pmpp = st.number_input("Reproducibility Pmpp [%] (sigma)", value=0.72, step=0.01)
+    st.subheader("Reproducibility (%), Normal (σ)")
+    repro_isc = st.number_input("Reproducibility Isc [%] (σ)", value=0.65, step=0.01)
+    repro_impp = st.number_input("Reproducibility Impp [%] (σ)", value=0.66, step=0.01)
+    repro_voc = st.number_input("Reproducibility Voc [%] (σ)", value=0.19, step=0.01)
+    repro_vmpp = st.number_input("Reproducibility Vmpp [%] (σ)", value=0.25, step=0.01)
+    repro_pmpp = st.number_input("Reproducibility Pmpp [%] (σ)", value=0.72, step=0.01)
 
 # Derived uncertainties
-u_mm = standard_uncertainty(mm_sigma, DIST_NORMAL)
-u_irr_nonuni = standard_uncertainty(irr_nonuni, DIST_RECTANGULAR)
-u_irr_dev_ref = standard_uncertainty(irr_dev_ref, DIST_RECTANGULAR)
+u_mm = standard_uncertainty(mm_sigma, DIST_NORMAL)  # %
+u_irr_nonuni = standard_uncertainty(irr_nonuni, DIST_RECTANGULAR)  # %
+u_irr_dev_ref = standard_uncertainty(irr_dev_ref, DIST_RECTANGULAR)  # %
 
-# Temperature chain to %
 temp_chain_percent_1 = percent_from_temp_dev_c(temp_dev_backsheet)
 temp_chain_percent_2 = percent_from_temp_dev_c(temp_sensors_mean_dev)
 u_temp_chain_1 = standard_uncertainty(temp_chain_percent_1, DIST_RECTANGULAR)
 u_temp_chain_2 = standard_uncertainty(temp_chain_percent_2, DIST_RECTANGULAR)
 
-# Temperature-induced relative uncertainty for current and voltage
-nu_temp_I = u_temp_effect(tc_i, u_tc_i, dT, u_dT)
-nu_temp_U = u_temp_effect(tc_u, u_tc_u, dT, u_dT)
+u_temp_I = u_temp_effect(tc_i, u_tc_i, dT, u_dT)  # %
+u_temp_U = u_temp_effect(tc_u, u_tc_u, dT, u_dT)  # %
 
-# Hysteresis (rectangular)
-nu_hyst_isc = standard_uncertainty(hyst_isc, DIST_RECTANGULAR)
-nu_hyst_impp = standard_uncertainty(hyst_impp, DIST_RECTANGULAR)
-nu_hyst_voc = standard_uncertainty(hyst_voc, DIST_RECTANGULAR)
-nu_hyst_vmpp = standard_uncertainty(hyst_vmpp, DIST_RECTANGULAR)
-nu_hyst_pmpp = standard_uncertainty(hyst_pmpp, DIST_RECTANGULAR)
+u_hyst_isc = standard_uncertainty(hyst_isc, DIST_RECTANGULAR)
+u_hyst_impp = standard_uncertainty(hyst_impp, DIST_RECTANGULAR)
+u_hyst_voc = standard_uncertainty(hyst_voc, DIST_RECTANGULAR)
+u_hyst_vmpp = standard_uncertainty(hyst_vmpp, DIST_RECTANGULAR)
+u_hyst_pmpp = standard_uncertainty(hyst_pmpp, DIST_RECTANGULAR)
 
-# Reproducibility (normal)
-nu_repro_isc = standard_uncertainty(repro_isc, DIST_NORMAL)
-nu_repro_impp = standard_uncertainty(repro_impp, DIST_NORMAL)
-nu_repro_voc = standard_uncertainty(repro_voc, DIST_NORMAL)
-nu_repro_vmpp = standard_uncertainty(repro_vmpp, DIST_NORMAL)
-nu_repro_pmpp = standard_uncertainty(repro_pmpp, DIST_NORMAL)
+u_repro_isc = standard_uncertainty(repro_isc, DIST_NORMAL)
+u_repro_impp = standard_uncertainty(repro_impp, DIST_NORMAL)
+u_repro_voc = standard_uncertainty(repro_voc, DIST_NORMAL)
+u_repro_vmpp = standard_uncertainty(repro_vmpp, DIST_NORMAL)
+u_repro_pmpp = standard_uncertainty(repro_pmpp, DIST_NORMAL)
 
-# Build contribution dicts
 contrib_I_common = {
     "Spectral mismatch (MM)": u_mm,
     "Irradiance non-uniformity": u_irr_nonuni,
-    "Irradiance dev. module->ref cell": u_irr_dev_ref,
+    "Irradiance dev. module→ref cell": u_irr_dev_ref,
 }
 if include_temp_chain:
     contrib_I_common.update({
-        "Temp chain: backsheet<->pn junction": u_temp_chain_1,
-        "Temp chain: sensors mean<->true mean": u_temp_chain_2,
+        "Temp chain: backsheet↔pn junction": u_temp_chain_1,
+        "Temp chain: sensors mean↔true mean": u_temp_chain_2,
     })
+
 contrib_I_current = {
     "Temperature effect via TC_I": u_temp_I,
     "Hysteresis": u_hyst_isc,
@@ -137,18 +147,18 @@ contrib_Impp_current = {
     "Hysteresis": u_hyst_impp,
     "Reproducibility": u_repro_impp,
 }
+
 contrib_V_common = {"Temperature effect via TC_U": u_temp_U}
 if include_irr_in_voltage:
     contrib_V_common.update({
         "Irradiance non-uniformity": u_irr_nonuni,
-        "Irradiance dev. module->ref cell": u_irr_dev_ref,
+        "Irradiance dev. module→ref cell": u_irr_dev_ref,
         "Spectral mismatch (MM)": u_mm,
     })
 contrib_V_voc = {"Hysteresis": u_hyst_voc, "Reproducibility": u_repro_voc}
 contrib_V_vmpp = {"Hysteresis": u_hyst_vmpp, "Reproducibility": u_repro_vmpp}
-contrib_P_pmpp_specific = {"Hysteresis": u_hyst_pmpp, "Reproducibility": u_repro_pmpp}
 
-# Compute budgets
+contrib_P_pmpp_specific = {"Hysteresis": u_hyst_pmpp, "Reproducibility": u_repro_pmpp}
 
 def make_budget_df(contribs: Dict[str, float]) -> pd.DataFrame:
     df = pd.DataFrame({"Contribution": list(contribs.keys()), "Standard uncertainty u_j [%]": list(contribs.values())})
@@ -234,11 +244,12 @@ with pd.ExcelWriter("pv_iv_uncertainty_report.xlsx", engine="openpyxl") as write
 with open("pv_iv_uncertainty_report.xlsx", "rb") as f:
     st.download_button(label="Download full report (Excel)", data=f, file_name="pv_iv_uncertainty_report.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-st.info('''
+st.info("""
 Notes
 - Rectangular distributions -> standard uncertainties via a/sqrt(3).
 - Temperature effects: u(y)^2 = (DeltaT)^2 * u(TC)^2 + (TC)^2 * u(DeltaT)^2.
-- Temperature measurement-chain deviations -> relative % using (dev / 25 degC) * 100.
+- Temperature chain deviations -> relative % using (dev / 25 degC) * 100.
 - Pmpp uncertainty assumes independence between Impp and Vmpp contributions (u_rel(P) approx sqrt(u_rel(I)^2 + u_rel(V)^2)).
-- Adjust inputs in the sidebar to match your measurement setup.
-''')
+- Use geometry values to contextualize non-uniformity (evaluate experimentally).
+""")
+
