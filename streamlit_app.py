@@ -199,7 +199,7 @@ u_temp_unit_ref_percent = standard_uncertainty(percent_from_temp_dev_c(u_temp_un
 
 u_avg_irr_area_std = standard_uncertainty(u_avg_irr_area, dist_default)
 u_spectral_mismatch_extra = standard_uncertainty(spectral_mismatch_extra, dist_default)
-nu_nonuniform_module = standard_uncertainty(non_uniformity_module, DIST_RECTANGULAR)
+u_nonuniform_module = standard_uncertainty(non_uniformity_module, DIST_RECTANGULAR)
 
 u_temp_unit_pv_percent = standard_uncertainty(percent_from_temp_dev_c(u_temp_unit_pv), DIST_RECTANGULAR)
 u_cell_vs_backsheet_percent = standard_uncertainty(percent_from_temp_dev_c(temp_cell_vs_backsheet), DIST_RECTANGULAR)
@@ -210,20 +210,20 @@ lead_resistance_percent = 0.0
 u_hyst_didt_std = standard_uncertainty(hyst_didt, DIST_RECTANGULAR)
 
 u_very_short = standard_uncertainty(very_short, dist_default)
-nu_short_term = standard_uncertainty(short_term, dist_default)
-nu_long_term = standard_uncertainty(long_term, dist_default)
+u_short_term = standard_uncertainty(short_term, dist_default)
+u_long_term = standard_uncertainty(long_term, dist_default)
 
 u_long_rep_pmax = standard_uncertainty(long_rep_pmax, DIST_NORMAL)
-nu_long_rep_isc = standard_uncertainty(long_rep_isc, DIST_NORMAL)
-nu_long_rep_voc = standard_uncertainty(long_rep_voc, DIST_NORMAL)
+u_long_rep_isc = standard_uncertainty(long_rep_isc, DIST_NORMAL)
+u_long_rep_voc = standard_uncertainty(long_rep_voc, DIST_NORMAL)
 
 u_stc_pmax = standard_uncertainty(stc_pmax, dist_default)
-nu_stc_voc = standard_uncertainty(stc_voc, dist_default)
-nu_stc_isc = standard_uncertainty(stc_isc, dist_default)
+u_stc_voc = standard_uncertainty(stc_voc, dist_default)
+u_stc_isc = standard_uncertainty(stc_isc, dist_default)
 
 u_fit_pmax = standard_uncertainty(fit_pmax, dist_default)
-nu_fit_isc = standard_uncertainty(fit_isc, dist_default)
-nu_fit_voc = standard_uncertainty(fit_voc, dist_default)
+u_fit_isc = standard_uncertainty(fit_isc, dist_default)
+u_fit_voc = standard_uncertainty(fit_voc, dist_default)
 
 # Build budgets
 contrib_I_common = {
